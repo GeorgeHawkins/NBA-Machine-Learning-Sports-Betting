@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import tensorflow as tf
 from colorama import Fore, Style
+import json
 
 from src.DataProviders.SbrOddsProvider import SbrOddsProvider
 from src.Predict import NN_Runner, XGBoost_Runner
@@ -25,6 +26,8 @@ def create_todays_games_data(games, df, odds, schedule_df, today):
     todays_games_uo = []
     home_team_odds = []
     away_team_odds = []
+    todays_games_under_odds = []
+    todays_games_over_odds = []
 
     for game in games:
         home_team, away_team = game
@@ -33,7 +36,9 @@ def create_todays_games_data(games, df, odds, schedule_df, today):
         if odds:
             game_key = f"{home_team}:{away_team}"
             game_odds = odds[game_key]
-            todays_games_uo.append(game_odds['under_over_odds'])
+            todays_games_uo.append(game_odds['under_over_line'])
+            todays_games_under_odds.append(game_odds['under_odds'])
+            todays_games_over_odds.append(game_odds['over_odds'])
             home_team_odds.append(game_odds[home_team]['money_line_odds'])
             away_team_odds.append(game_odds[away_team]['money_line_odds'])
         else:
@@ -99,7 +104,7 @@ def resolve_games(odds, sportsbook):
             home_team, away_team = game_key.split(":")
             
             # Check if any odds are missing
-            under_over_missing = game_odds.get('under_over_odds') is None
+            under_over_missing = game_odds.get('under_over_line') is None
             home_ml_missing = game_odds.get(home_team, {}).get('money_line_odds') is None
             away_ml_missing = game_odds.get(away_team, {}).get('money_line_odds') is None
             
@@ -155,12 +160,30 @@ def run_models(data, normalized_data, todays_games_uo, frame_ml, games, home_tea
         )
         print("-------------------------------------------------------")
 
-
 def main(args):
+    odds = SbrOddsProvider().get_odds()
+    games, odds = resolve_games(odds, "fanduel")
+    stats_json = get_json_data(DATA_URL)
+    df = to_data_frame(stats_json)
+    schedule_df = load_schedule()
+    today = datetime.today()
+
+    data, todays_games_uo, frame_ml, home_team_odds, away_team_odds = create_todays_games_data(
+        games, df, odds, schedule_df, today
+    )
+
+    XGBoost_Runner.xgb_runner(
+        data, todays_games_uo, frame_ml, games, home_team_odds, away_team_odds, True
+    )
+
+    return
+
+def old_main(args):
     odds = None
     if args.odds:
         odds = SbrOddsProvider(sportsbook=args.odds).get_odds()
     games, odds = resolve_games(odds, args.odds)
+
     if games is None:
         return
 

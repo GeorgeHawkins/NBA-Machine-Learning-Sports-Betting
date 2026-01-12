@@ -179,5 +179,55 @@ def xgb_runner(data, todays_games_uo, frame_ml, games, home_team_odds, away_team
             away_team_odds,
             kelly_criterion,
         )
+        structured_output = []
+        # output
+        # date, home_team, home_team_ev, home_confidence, away_team, away_team_ev, away_confidence, ou_pick, ou_value, ou_confidence, ou_ev
+
+
+
+    finally:
+        deinit()
+
+
+def xgb_runner_structured_output(data, todays_games_uo, frame_ml, games, home_team_odds, away_team_odds, kelly_criterion):
+    _load_models()
+
+    frame_uo = frame_ml.copy()
+    frame_uo["OU"] = np.asarray(todays_games_uo, dtype=float)
+
+    try:
+        ml_predictions_array = _predict_probs(xgb_ml, data, xgb_ml_calibrator)
+        ou_predictions_array = _predict_probs(
+            xgb_uo,
+            frame_uo.values.astype(float),
+            xgb_uo_calibrator,
+        )
+
+        for idx, game in enumerate(games):
+            home_team, away_team = game
+            winner = int(np.argmax(ml_predictions_array[idx]))
+            under_over = int(np.argmax(ou_predictions_array[idx]))
+            winner_confidence = round(ml_predictions_array[idx][winner] * 100, 1)
+            ou_confidence = round(ou_predictions_array[idx][under_over] * 100, 1)
+
+            print(
+                _format_game_line(
+                    home_team,
+                    away_team,
+                    winner_is_home=(winner == 1),
+                    winner_confidence=winner_confidence,
+                    under_over=under_over,
+                    ou_value=todays_games_uo[idx],
+                    ou_confidence=ou_confidence,
+                )
+            )
+
+        _print_expected_value(
+            games,
+            ml_predictions_array,
+            home_team_odds,
+            away_team_odds,
+            kelly_criterion,
+        )
     finally:
         deinit()
