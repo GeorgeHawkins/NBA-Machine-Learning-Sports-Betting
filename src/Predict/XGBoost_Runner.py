@@ -8,6 +8,7 @@ import xgboost as xgb
 from colorama import Fore, Style, init, deinit
 from src.Utils import Expected_Value
 from src.Utils import Kelly_Criterion as kc
+import datetime
 
 
 init()
@@ -179,12 +180,7 @@ def xgb_runner(data, todays_games_uo, frame_ml, games, home_team_odds, away_team
             away_team_odds,
             kelly_criterion,
         )
-        structured_output = []
-        # output
-        # date, home_team, home_team_ev, home_confidence, away_team, away_team_ev, away_confidence, ou_pick, ou_value, ou_confidence, ou_ev
-
-
-
+        
     finally:
         deinit()
 
@@ -194,6 +190,9 @@ def xgb_runner_structured_output(data, todays_games_uo, frame_ml, games, home_te
 
     frame_uo = frame_ml.copy()
     frame_uo["OU"] = np.asarray(todays_games_uo, dtype=float)
+    structured_output = []
+        # date, home_team, home_team_ev, home_confidence, home_odds, away_team, away_team_ev, away_confidence, away_odds, ou_pick, ou_value, ou_confidence, ou_ev
+
 
     try:
         ml_predictions_array = _predict_probs(xgb_ml, data, xgb_ml_calibrator)
@@ -209,25 +208,28 @@ def xgb_runner_structured_output(data, todays_games_uo, frame_ml, games, home_te
             under_over = int(np.argmax(ou_predictions_array[idx]))
             winner_confidence = round(ml_predictions_array[idx][winner] * 100, 1)
             ou_confidence = round(ou_predictions_array[idx][under_over] * 100, 1)
+            winner_is_home = winner == 1
+            away_confidence = 100 - winner_confidence if winner_is_home else winner_confidence
+            home_confidence = 100 - away_confidence if winner_is_home else away_confidence
+            ou_label = "UNDER" if under_over == 0 else "OVER"
+            ou_value = todays_games_uo[idx]
 
-            print(
-                _format_game_line(
-                    home_team,
-                    away_team,
-                    winner_is_home=(winner == 1),
-                    winner_confidence=winner_confidence,
-                    under_over=under_over,
-                    ou_value=todays_games_uo[idx],
-                    ou_confidence=ou_confidence,
+            ev_home = float(
+                Expected_Value.expected_value(
+                    ml_predictions_array[idx][1],
+                    int(home_team_odds[idx]),
                 )
             )
+            ev_away = float(
+                Expected_Value.expected_value(
+                    ml_predictions_array[idx][0],
+                    int(away_team_odds[idx]),
+                )
+            )
+            home_odds = kc.american_to_decimal(int(home_team_odds[idx]))
+            away_odds = kc.american_to_decimal(int(away_team_odds[idx]))
 
-        _print_expected_value(
-            games,
-            ml_predictions_array,
-            home_team_odds,
-            away_team_odds,
-            kelly_criterion,
-        )
+            structured_output.append([datetime.datetime.now().strftime('%Y-%m-%d'), home_team, ev_home, home_confidence, home_odds, away_team, ev_away, away_odds, ou_label, ou_value, ou_confidence ])
+        return structured_output
     finally:
         deinit()

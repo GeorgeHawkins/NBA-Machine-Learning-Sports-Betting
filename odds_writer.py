@@ -1,9 +1,12 @@
 import subprocess, re
 import json
+
+from requests import get
 import gspread
 from dotenv import load_dotenv
 import os
 import datetime
+from main import get_those_games
 
 load_dotenv()
 
@@ -44,22 +47,23 @@ def write_game_data(games):
     ml_worksheet = sheet.worksheet('ML')
     ou_worksheet = sheet.worksheet('OU')
     
-    all_games_new_rows = []
+    # all_games_new_rows = []
     # might just reference (count if?) the main sheet for the actual ml and ou sheets
     # ml_new_rows = []
     # ou_new_rows = []
 
-    for game in games:
-        all_games_row = [datetime.datetime.now().strftime('%Y-%m-%d'), game['home_team'], float(game['home_team_ev']), float(game['home_confidence']) / 100, game['away_team'], float(game['away_team_ev']), game['ou_pick'], float(game['ou_value']), float(game['ou_confidence'])]
-        # ml_row = [datetime.datetime.now().strftime('%Y-%m-%d'), game['home_team'], float(game['home_team_ev']), float(game['home_confidence']) / 100, game['away_team'], float(game['away_team_ev']), game['ou_pick'], float(game['ou_value']), float(game['ou_confidence'])]
-        # ou_row = [datetime.datetime.now().strftime('%Y-%m-%d'), game['home_team'], float(game['home_team_ev']), float(game['home_confidence']) / 100, game['away_team'], float(game['away_team_ev']), game['ou_pick'], float(game['ou_value']), float(game['ou_confidence'])]
-        all_games_new_rows.append(all_games_row)
+    # for game in games:
+    #     all_games_row = [datetime.datetime.now().strftime('%Y-%m-%d'), game['home_team'], float(game['home_team_ev']), float(game['home_confidence']) / 100, game['away_team'], float(game['away_team_ev']), game['ou_pick'], float(game['ou_value']), float(game['ou_confidence'])]
+    #     # ml_row = [datetime.datetime.now().strftime('%Y-%m-%d'), game['home_team'], float(game['home_team_ev']), float(game['home_confidence']) / 100, game['away_team'], float(game['away_team_ev']), game['ou_pick'], float(game['ou_value']), float(game['ou_confidence'])]
+    #     # ou_row = [datetime.datetime.now().strftime('%Y-%m-%d'), game['home_team'], float(game['home_team_ev']), float(game['home_confidence']) / 100, game['away_team'], float(game['away_team_ev']), game['ou_pick'], float(game['ou_value']), float(game['ou_confidence'])]
+    #     all_games_new_rows.append(all_games_row)
 
-    all_games_worksheet.append_rows(all_games_new_rows)
+    all_games_worksheet.append_rows(games)
     
+    # print(json.dumps(games, sort_keys=True, indent=4))
 
-    print(json.dumps(games, sort_keys=True, indent=4))
+# games = fetch_game_data()
 
-games = fetch_game_data()
+games = get_those_games()
 
 write_game_data(games)

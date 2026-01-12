@@ -160,7 +160,10 @@ def run_models(data, normalized_data, todays_games_uo, frame_ml, games, home_tea
         )
         print("-------------------------------------------------------")
 
-def main(args):
+def get_those_games():
+    return main()
+
+def main():
     odds = SbrOddsProvider().get_odds()
     games, odds = resolve_games(odds, "fanduel")
     stats_json = get_json_data(DATA_URL)
@@ -172,11 +175,12 @@ def main(args):
         games, df, odds, schedule_df, today
     )
 
-    XGBoost_Runner.xgb_runner(
+    structured_output = XGBoost_Runner.xgb_runner_structured_output(
         data, todays_games_uo, frame_ml, games, home_team_odds, away_team_odds, True
     )
 
-    return
+
+    return structured_output
 
 def old_main(args):
     odds = None
