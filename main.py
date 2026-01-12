@@ -20,7 +20,6 @@ TODAYS_GAMES_URL = "https://data.nba.com/data/10s/v2015/json/mobile_teams/nba/20
 DATA_URL = "https://stats.nba.com/stats/leaguedashteamstats?Conference=&DateFrom=&DateTo=&Division=&GameScope=&GameSegment=&Height=&ISTRound=&LastNGames=0&LeagueID=00&Location=&MeasureType=Base&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PaceAdjust=N&PerMode=PerGame&Period=0&PlayerExperience=&PlayerPosition=&PlusMinus=N&Rank=N&Season=2025-26&SeasonSegment=&SeasonType=Regular%20Season&ShotClockRange=&StarterBench=&TeamID=0&TwoWay=0&VsConference=&VsDivision="
 SCHEDULE_PATH = "Data/nba-2025-UTC.csv"
 
-
 def create_todays_games_data(games, df, odds, schedule_df, today):
     match_data = []
     todays_games_uo = []
@@ -92,6 +91,34 @@ def resolve_games(odds, sportsbook):
         if len(games) == 0:
             print("No games found.")
             return None, None
+        
+        # Remove games with missing odds
+        games_to_remove = []
+        for game_key in list(odds.keys()):
+            game_odds = odds[game_key]
+            home_team, away_team = game_key.split(":")
+            
+            # Check if any odds are missing
+            under_over_missing = game_odds.get('under_over_odds') is None
+            home_ml_missing = game_odds.get(home_team, {}).get('money_line_odds') is None
+            away_ml_missing = game_odds.get(away_team, {}).get('money_line_odds') is None
+            
+            if under_over_missing or home_ml_missing or away_ml_missing:
+                # Remove from odds dictionary
+                del odds[game_key]
+                # Mark for removal from games list
+                games_to_remove.append([home_team, away_team])
+                print(f"Removed {away_team} @ {home_team} - odds not available")
+        
+        # Remove from games list
+        for game_to_remove in games_to_remove:
+            if game_to_remove in games:
+                games.remove(game_to_remove)
+        
+        if len(games) == 0:
+            print("No games found after filtering missing odds.")
+            return None, None
+        
         game_key = f"{games[0][0]}:{games[0][1]}"
         if game_key not in odds:
             print(game_key)
