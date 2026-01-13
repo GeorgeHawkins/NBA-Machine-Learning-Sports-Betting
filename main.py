@@ -152,8 +152,8 @@ def run_models(data, normalized_data, todays_games_uo, frame_ml, games, home_tea
 def get_structured_games():
 
     today = datetime.today()
-    today_string = today.strftime("%Y-%m-%d")
-    yesterday_string = (today - timedelta(days=1)).strftime("%Y-%m-%d")
+    today_string = today.strftime("%m/%d/%Y")
+    yesterday_string = (today - timedelta(days=1)).strftime("%m/%d/%Y")
 
     date = today_string
 
