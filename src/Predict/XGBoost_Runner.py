@@ -185,7 +185,7 @@ def xgb_runner(data, todays_games_uo, frame_ml, games, home_team_odds, away_team
         deinit()
 
 
-def xgb_runner_structured_output(data, todays_games_uo, frame_ml, games, home_team_odds, away_team_odds, kelly_criterion):
+def xgb_runner_structured_output(data, todays_games_uo, frame_ml, games, odds, kelly_criterion):
     _load_models()
 
     frame_uo = frame_ml.copy()
@@ -212,22 +212,30 @@ def xgb_runner_structured_output(data, todays_games_uo, frame_ml, games, home_te
             ou_label = "UNDER" if under_over == 0 else "OVER"
             ou_value = todays_games_uo[idx]
 
-            ev_home = float(
+            home_ev = float(
                 Expected_Value.expected_value(
                     ml_predictions_array[idx][1],
-                    int(home_team_odds[idx]),
+                    int(odds[idx]['home_ml']),
                 )
             )
-            ev_away = float(
+            away_ev = float(
                 Expected_Value.expected_value(
                     ml_predictions_array[idx][0],
-                    int(away_team_odds[idx]),
+                    int(odds[idx]['away_ml']),
                 )
             )
-            home_odds = kc.american_to_decimal(int(home_team_odds[idx]))
-            away_odds = kc.american_to_decimal(int(away_team_odds[idx]))
+            ou_ev = float(
+                Expected_Value.expected_value(
+                    ou_predictions_array[idx][under_over],
+                    int(odds[idx]['under'] if under_over == 0 else odds[idx]['over']),
+                )
+            )
+            
+            home_odds = kc.american_to_decimal(int(odds[idx]['home_ml']))
+            away_odds = kc.american_to_decimal(int(odds[idx]['away_ml']))
+            ou_odds = kc.american_to_decimal(int(odds[idx]['under'] if under_over == 0 else odds[idx]['over']))
 
-            structured_output.append([datetime.datetime.now().strftime('%Y-%m-%d'), home_team, ev_home, home_confidence / 100, home_odds, away_team, ev_away, away_confidence / 100, away_odds, ou_label, ou_value, ou_confidence / 100 ])
+            structured_output.append([datetime.datetime.now().strftime('%Y-%m-%d'), home_team, home_ev, home_confidence / 100, home_odds, away_team, away_ev, away_confidence / 100, away_odds, ou_label, ou_value,  ou_ev, ou_confidence / 100, ou_odds,])
         return structured_output
     finally:
         deinit()

@@ -21,9 +21,10 @@ TODAYS_GAMES_URL = "https://data.nba.com/data/10s/v2015/json/mobile_teams/nba/20
 DATA_URL = "https://stats.nba.com/stats/leaguedashteamstats?Conference=&DateFrom=&DateTo=&Division=&GameScope=&GameSegment=&Height=&ISTRound=&LastNGames=0&LeagueID=00&Location=&MeasureType=Base&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PaceAdjust=N&PerMode=PerGame&Period=0&PlayerExperience=&PlayerPosition=&PlusMinus=N&Rank=N&Season=2025-26&SeasonSegment=&SeasonType=Regular%20Season&ShotClockRange=&StarterBench=&TeamID=0&TwoWay=0&VsConference=&VsDivision="
 SCHEDULE_PATH = "Data/nba-2025-UTC.csv"
 
-def create_todays_games_data(games, df, odds, schedule_df, today):
+def create_todays_games_data(games, df, book_odds, schedule_df, today):
     match_data = []
     todays_games_uo = []
+    odds = []
     home_team_odds = []
     away_team_odds = []
     todays_games_under_odds = []
@@ -33,14 +34,15 @@ def create_todays_games_data(games, df, odds, schedule_df, today):
         home_team, away_team = game
         if home_team not in team_index_current or away_team not in team_index_current:
             continue
-        if odds:
+        if book_odds:
             game_key = f"{home_team}:{away_team}"
-            game_odds = odds[game_key]
+            game_odds = book_odds[game_key]
             todays_games_uo.append(game_odds['under_over_line'])
-            todays_games_under_odds.append(game_odds['under_odds'])
-            todays_games_over_odds.append(game_odds['over_odds'])
-            home_team_odds.append(game_odds[home_team]['money_line_odds'])
-            away_team_odds.append(game_odds[away_team]['money_line_odds'])
+            odds.append({'home_ml': game_odds[home_team]['money_line_odds'], 'away_ml': game_odds[away_team]['money_line_odds'], 'under': game_odds['under_odds'], 'over': game_odds['over_odds']})
+            # todays_games_under_odds.append(game_odds['under_odds'])
+            # todays_games_over_odds.append(game_odds['over_odds'])
+            # home_team_odds.append(game_odds[home_team]['money_line_odds'])
+            # away_team_odds.append(game_odds[away_team]['money_line_odds'])
         else:
             todays_games_uo.append(input(home_team + ' vs ' + away_team + ': '))
             home_team_odds.append(input(home_team + ' odds: '))
@@ -83,7 +85,7 @@ def create_todays_games_data(games, df, odds, schedule_df, today):
     data = frame_ml.values
     data = data.astype(float)
 
-    return data, todays_games_uo, frame_ml, home_team_odds, away_team_odds
+    return data, todays_games_uo, frame_ml, odds
 
 
 def load_schedule():
@@ -168,12 +170,12 @@ def get_structured_games():
     schedule_df = load_schedule()
     today = datetime.today()
 
-    data, todays_games_uo, frame_ml, home_team_odds, away_team_odds = create_todays_games_data(
+    data, todays_games_uo, frame_ml, odds = create_todays_games_data(
         games, df, odds, schedule_df, today
     )
 
     structured_output = XGBoost_Runner.xgb_runner_structured_output(
-        data, todays_games_uo, frame_ml, games, home_team_odds, away_team_odds, True
+        data, todays_games_uo, frame_ml, games, odds, True
     )
 
     return structured_output
