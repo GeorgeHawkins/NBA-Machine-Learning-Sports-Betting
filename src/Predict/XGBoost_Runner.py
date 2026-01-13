@@ -185,7 +185,7 @@ def xgb_runner(data, todays_games_uo, frame_ml, games, home_team_odds, away_team
         deinit()
 
 
-def xgb_runner_structured_output(data, todays_games_uo, frame_ml, games, odds, kelly_criterion):
+def xgb_runner_structured_output(data, todays_games_uo, frame_ml, games, odds, date):
     _load_models()
 
     frame_uo = frame_ml.copy()
@@ -238,7 +238,7 @@ def xgb_runner_structured_output(data, todays_games_uo, frame_ml, games, odds, k
             ou_kc = kc.calculate_kelly_criterion(int(odds[idx]['under'] if under_over == 0 else odds[idx]['over']), ou_predictions_array[idx][under_over])
             ou_kc = ou_kc / 100
 
-            structured_output.append([datetime.datetime.now().strftime('%Y-%m-%d'), home_team, home_ev, home_confidence / 100, home_odds, home_kc, away_team, away_ev, away_confidence / 100, away_odds, away_kc, ou_label, ou_value,  ou_ev, ou_confidence / 100, ou_odds, ou_kc])
+            structured_output.append([date, home_team, home_ev, home_confidence / 100, home_odds, home_kc, away_team, away_ev, away_confidence / 100, away_odds, away_kc, ou_label, ou_value,  ou_ev, ou_confidence / 100, ou_odds, ou_kc])
         return structured_output
     finally:
         deinit()

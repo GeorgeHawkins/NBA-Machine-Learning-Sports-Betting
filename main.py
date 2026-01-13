@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 import pandas as pd
 import tensorflow as tf
 from colorama import Fore, Style
-import json
 
 from src.DataProviders.SbrOddsProvider import SbrOddsProvider
 from src.Predict import NN_Runner, XGBoost_Runner
@@ -25,10 +24,6 @@ def create_todays_games_data(games, df, book_odds, schedule_df, today):
     match_data = []
     todays_games_uo = []
     odds = []
-    home_team_odds = []
-    away_team_odds = []
-    todays_games_under_odds = []
-    todays_games_over_odds = []
 
     for game in games:
         home_team, away_team = game
@@ -39,14 +34,6 @@ def create_todays_games_data(games, df, book_odds, schedule_df, today):
             game_odds = book_odds[game_key]
             todays_games_uo.append(game_odds['under_over_line'])
             odds.append({'home_ml': game_odds[home_team]['money_line_odds'], 'away_ml': game_odds[away_team]['money_line_odds'], 'under': game_odds['under_odds'], 'over': game_odds['over_odds']})
-            # todays_games_under_odds.append(game_odds['under_odds'])
-            # todays_games_over_odds.append(game_odds['over_odds'])
-            # home_team_odds.append(game_odds[home_team]['money_line_odds'])
-            # away_team_odds.append(game_odds[away_team]['money_line_odds'])
-        else:
-            todays_games_uo.append(input(home_team + ' vs ' + away_team + ': '))
-            home_team_odds.append(input(home_team + ' odds: '))
-            away_team_odds.append(input(away_team + ' odds: '))
 
         # calculate days rest for both teams
         home_games = schedule_df[
@@ -163,19 +150,26 @@ def run_models(data, normalized_data, todays_games_uo, frame_ml, games, home_tea
         print("-------------------------------------------------------")
 
 def get_structured_games():
-    odds = SbrOddsProvider().get_odds()
+
+    today = datetime.today()
+    today_string = today.strftime("%Y-%m-%d")
+    yesterday_string = (today - timedelta(days=1)).strftime("%Y-%m-%d")
+
+    date = today_string
+
+    odds = SbrOddsProvider(date=date).get_odds()
+
     games, odds = resolve_games(odds, "fanduel")
     stats_json = get_json_data(DATA_URL)
     df = to_data_frame(stats_json)
     schedule_df = load_schedule()
-    today = datetime.today()
 
     data, todays_games_uo, frame_ml, odds = create_todays_games_data(
         games, df, odds, schedule_df, today
     )
 
     structured_output = XGBoost_Runner.xgb_runner_structured_output(
-        data, todays_games_uo, frame_ml, games, odds, True
+        data, todays_games_uo, frame_ml, games, odds, date
     )
 
     return structured_output
