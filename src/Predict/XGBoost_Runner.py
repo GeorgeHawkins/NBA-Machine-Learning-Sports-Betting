@@ -191,8 +191,6 @@ def xgb_runner_structured_output(data, todays_games_uo, frame_ml, games, home_te
     frame_uo = frame_ml.copy()
     frame_uo["OU"] = np.asarray(todays_games_uo, dtype=float)
     structured_output = []
-        # date, home_team, home_team_ev, home_confidence, home_odds, away_team, away_team_ev, away_confidence, away_odds, ou_pick, ou_value, ou_confidence, ou_ev
-
 
     try:
         ml_predictions_array = _predict_probs(xgb_ml, data, xgb_ml_calibrator)
@@ -229,7 +227,7 @@ def xgb_runner_structured_output(data, todays_games_uo, frame_ml, games, home_te
             home_odds = kc.american_to_decimal(int(home_team_odds[idx]))
             away_odds = kc.american_to_decimal(int(away_team_odds[idx]))
 
-            structured_output.append([datetime.datetime.now().strftime('%Y-%m-%d'), home_team, ev_home, home_confidence, home_odds, away_team, ev_away, away_odds, ou_label, ou_value, ou_confidence ])
+            structured_output.append([datetime.datetime.now().strftime('%Y-%m-%d'), home_team, ev_home, home_confidence / 100, home_odds, away_team, ev_away, away_confidence / 100, away_odds, ou_label, ou_value, ou_confidence / 100 ])
         return structured_output
     finally:
         deinit()
