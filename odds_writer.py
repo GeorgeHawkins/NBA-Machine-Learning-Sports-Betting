@@ -12,15 +12,40 @@ def _column_number_to_letter(col_num):
 def format_game_data(worksheet, games):
     existing_data = worksheet.get_all_values()
     
+    # Find column indices from header row
+    date_col_idx = None
+    home_team_col_idx = None
+    away_team_col_idx = None
+    
+    if len(existing_data) > 0:
+        header_row = existing_data[0]
+        for idx, header_cell in enumerate(header_row):
+            header_cell_lower = header_cell.strip().lower()
+            if date_col_idx is None and 'date' in header_cell_lower:
+                date_col_idx = idx
+            elif home_team_col_idx is None and ('home team' in header_cell_lower):
+                home_team_col_idx = idx
+            elif away_team_col_idx is None and ('away team' in header_cell_lower):
+                away_team_col_idx = idx
+    
+    # Fallback to hardcoded indices if headers not found
+    if date_col_idx is None:
+        date_col_idx = 0
+    if home_team_col_idx is None:
+        home_team_col_idx = 1
+    if away_team_col_idx is None:
+        away_team_col_idx = 6
+    
     # Create a mapping of (date, home_team, away_team) -> row_index (1-indexed)
     # Assuming headers in row 1, data starts at row 2
     existing_rows_map = {}
     if len(existing_data) > 1:  # Has header and at least one data row
         for idx, row in enumerate(existing_data[1:], start=2):  # Start at row 2 (skip header)
-            if len(row) >= 6:  # Ensure we have at least date, home_team, and away_team columns
-                date = row[0] if len(row) > 0 else ""
-                home_team = row[1] if len(row) > 1 else ""
-                away_team = row[5] if len(row) > 5 else ""
+            max_col_needed = max(date_col_idx, home_team_col_idx, away_team_col_idx)
+            if len(row) > max_col_needed:
+                date = row[date_col_idx] if len(row) > date_col_idx else ""
+                home_team = row[home_team_col_idx] if len(row) > home_team_col_idx else ""
+                away_team = row[away_team_col_idx] if len(row) > away_team_col_idx else ""
                 key = (date, home_team, away_team)
                 if all(key):  # Only add if all three values are non-empty
                     existing_rows_map[key] = idx
@@ -29,12 +54,13 @@ def format_game_data(worksheet, games):
     rows_to_append = []
     
     for game in games:
-        if len(game) < 6:
+        max_col_needed = max(date_col_idx, home_team_col_idx, away_team_col_idx)
+        if len(game) <= max_col_needed:
             continue
         
-        date = str(game[0])
-        home_team = str(game[1])
-        away_team = str(game[5])
+        date = str(game[date_col_idx])
+        home_team = str(game[home_team_col_idx])
+        away_team = str(game[away_team_col_idx])
         key = (date, home_team, away_team)
         
         if key in existing_rows_map:
@@ -47,7 +73,7 @@ def format_game_data(worksheet, games):
 def write_game_data(games):
     gc = gspread.service_account(filename='service-account.json')
     sheet = gc.open_by_key(os.getenv('GOOGLE_SHEETS_KEY'))
-    all_games_worksheet = sheet.worksheet('All Games - Working')
+    all_games_worksheet = sheet.worksheet('All Games')
 
     rows_to_update, rows_to_append = format_game_data(all_games_worksheet, games)
     # Perform batch updates
