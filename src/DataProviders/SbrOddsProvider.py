@@ -34,8 +34,6 @@ class SbrOddsProvider:
                 money_line_away_value = game['away_ml'][self.sportsbook]
 
             # Get totals bet value
-            # print("------------------GAME--------------------------------")
-            # print(json.dumps(game, sort_keys=True, indent=4))
             if self.sportsbook in game['total']:
                 totals_value = game['total'][self.sportsbook]
 
