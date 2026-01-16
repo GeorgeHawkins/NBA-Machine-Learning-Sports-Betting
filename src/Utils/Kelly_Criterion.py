@@ -8,6 +8,18 @@ def american_to_decimal(american_odds):
         decimal_odds = (100 / abs(american_odds)) + 1
     return round(decimal_odds, 2)
 
+def decimal_to_american(decimal_odds: float | None):
+    """
+    Converts decimal odds to American odds.
+    """
+    if decimal_odds is None:
+        return None
+    if decimal_odds >= 2:
+        american_odds = (decimal_odds - 1) * 100
+    else:
+        american_odds = -100 / (decimal_odds - 1)
+    return round(american_odds, 2)
+
 # This is jank, KC needs decimal odds -1, i want true decimal odds everywhere else
 def calculate_kelly_criterion(american_odds, model_prob):
     """

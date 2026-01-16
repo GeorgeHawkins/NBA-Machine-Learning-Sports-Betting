@@ -1,11 +1,11 @@
 import requests
-from typing import Dict, Any, List, TypedDict
+from typing import Any, List, TypedDict, Optional
 from datetime import datetime
+from src.Utils.Kelly_Criterion import decimal_to_american
+from enum import Enum
 
 # https://www.sportsbet.com.au/apigw/sportsbook-sports/Sportsbook/Sports/Competitions/6927?displayType=default&includeTopMarkets=true&eventFilter=matches
 
-from typing import List, Any, Optional
-from enum import Enum
 
 
 class LiveStreamingInfo(TypedDict):
@@ -132,27 +132,55 @@ def fetch_odds() -> SportsBetResponse:
     response = requests.get(url)
     return response.json()
 
-def print_market_odds(market: MarketList):
-    print("*******************************")
-    print(market["name"])
-    print("*******************************")
-    for selection in market["selections"]:
-        print(selection["name"])
-        print(selection["price"]["winPrice"])
-        if selection["name"] == "Over" or selection["name"] == "Under":
-            print(selection["unformattedHandicap"])
+class SportsbetOddsProvider:
+    def __init__(self, date):
+        self.date = date
+        self.odds = fetch_odds()
 
+    def get_odds(self):
 
-odds = fetch_odds()
+        games = self.odds["events"]
 
-for event in odds["events"]:
-    print("--------------------------------")
-    print(event["name"])
-    timestamp_ms = event["startTime"]
-    dt = datetime.fromtimestamp(timestamp_ms)
-    print(dt.strftime("%Y-%m-%d %H:%M:%S %Z"))
-    print("--------------------------------")
-    match_betting_market = next((market for market in event["marketList"] if market["name"] == "Match Betting"), None)
-    total_points_market = next((market for market in event["marketList"] if market["name"] == "Total Points"), None)
-    print_market_odds(match_betting_market)
-    print_market_odds(total_points_market)
+        dict_res = {}
+
+        for game in games:
+            timestamp_ms = game["startTime"]
+            game_date = datetime.fromtimestamp(timestamp_ms)
+            filter_date = datetime.strptime(self.date, "%m/%d/%Y")
+            # if the game date does not match the filter date, skip the game
+            if game_date.date() != filter_date.date():
+                continue
+            home_team_name = game['participant2'].replace("Los Angeles Clippers", "LA Clippers")
+            away_team_name = game['participant1'].replace("Los Angeles Clippers", "LA Clippers")
+
+            money_line_home_value = money_line_away_value = totals_value = unders_value = overs_value = None
+
+            match_betting_market = next((market for market in game["marketList"] if market["name"] == "Match Betting"), None)
+            total_points_market = next((market for market in game["marketList"] if market["name"] == "Total Points"), None)
+
+            # Safely extract money line values, defaulting to None if market or selections don't exist
+            if match_betting_market and match_betting_market.get("selections") and len(match_betting_market["selections"]) >= 2:
+                money_line_away_value = match_betting_market["selections"][0].get("price", {}).get("winPrice")
+                money_line_home_value = match_betting_market["selections"][1].get("price", {}).get("winPrice")
+            else:
+                money_line_away_value = None
+                money_line_home_value = None
+
+            if total_points_market and total_points_market.get("selections") and len(total_points_market["selections"]) >= 2:
+                totals_value = total_points_market["selections"][0].get("unformattedHandicap")
+                overs_value = total_points_market["selections"][0].get("price", {}).get("winPrice")
+                unders_value = total_points_market["selections"][1].get("price", {}).get("winPrice")
+            else:
+                totals_value = None
+                overs_value = None
+                unders_value = None
+
+            dict_res[home_team_name + ':' + away_team_name] = {
+                    'under_over_line': float(totals_value),
+                    'under_odds': decimal_to_american(unders_value),
+                    'over_odds': decimal_to_american(overs_value),
+                    home_team_name: {'money_line_odds': decimal_to_american(money_line_home_value)},
+                    away_team_name: {'money_line_odds': decimal_to_american(money_line_away_value)}
+                }
+
+        return dict_res

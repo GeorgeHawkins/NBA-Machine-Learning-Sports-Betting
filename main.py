@@ -6,6 +6,7 @@ import tensorflow as tf
 from colorama import Fore, Style
 
 from src.DataProviders.SbrOddsProvider import SbrOddsProvider
+from Sportsbet_Odds_Provider import SportsbetOddsProvider
 from src.Predict import NN_Runner, XGBoost_Runner
 from src.Utils.Dictionaries import team_index_current
 from src.Utils.tools import (
@@ -149,17 +150,20 @@ def run_models(data, normalized_data, todays_games_uo, frame_ml, games, home_tea
         )
         print("-------------------------------------------------------")
 
-def get_structured_games():
+def get_structured_games(sportsbook="sportsbet"):
 
     today = datetime.today()
     today_string = today.strftime("%m/%d/%Y")
-    yesterday_string = (today - timedelta(days=1)).strftime("%m/%d/%Y")
+    tomorrow_string = (today + timedelta(days=1)).strftime("%m/%d/%Y")
 
     date = today_string
 
-    odds = SbrOddsProvider(date=date).get_odds()
+    if sportsbook == "sportsbet":
+        odds = SportsbetOddsProvider(date=date).get_odds()
+    else:
+        odds = SbrOddsProvider(date=date).get_odds()
 
-    games, odds = resolve_games(odds, "fanduel")
+    games, odds = resolve_games(odds, sportsbook)
     stats_json = get_json_data(DATA_URL)
     df = to_data_frame(stats_json)
     schedule_df = load_schedule()
